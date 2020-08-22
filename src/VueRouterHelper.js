@@ -1,13 +1,11 @@
-import Objs from 'nightnya-common-utils/Objs'
-import Strings from 'nightnya-common-utils/Strings'
-import Lists from 'nightnya-common-utils/Lists'
+import {Objs, Strings, Lists} from 'nightnya-common-utils'
 
 const Privates = {
   handlePermissionDenied(permissions, obj) {
     if (!Lists.includesAll(permissions, obj.meta._permissions)) {
       obj.meta._permissionDenied = true;
     }
-
+    
     if (Lists.isNotEmpty(obj.children)) {
       obj.children.forEach((ro) => {
         Privates.handlePermissionDenied(permissions, ro);
@@ -58,7 +56,7 @@ const loadUtils = {
 };
 
 export const VueRouterHelper = class VueRouterHelper {
-
+  
   constructor({layouts, routers, options = {}}) {
     this.config = Objs.merge({}, {
       layouts,
@@ -66,7 +64,7 @@ export const VueRouterHelper = class VueRouterHelper {
       options: Objs.merge(Objs.merge({}, defaultOptions, true), options, true)
     })
   }
-
+  
   buildLayouts() {
     if (!this.emptyLayout) {
       this.emptyLayout = {name: "EmptyLayout", render: h => h("router-view")}
@@ -89,9 +87,9 @@ export const VueRouterHelper = class VueRouterHelper {
       };
     }
     this.layoutMap = layoutMap;
-
+    
   }
-
+  
   buildRouters() {
     const helper = ({routers, componentLoadPath = '', titles = [], permissions = [], beforeEnter, rootRouterList}) => {
       const isTop = Strings.isBlank(componentLoadPath);
@@ -106,7 +104,7 @@ export const VueRouterHelper = class VueRouterHelper {
           // _dev: {},
           meta: {}
         };
-
+        
         /*
         标题
          */
@@ -119,9 +117,9 @@ export const VueRouterHelper = class VueRouterHelper {
         } else {
           routerObj.meta._titles.push(r.title || '');
         }
-
+        
         const _ = r._ || {};
-
+        
         /*
         权限链
          */
@@ -129,7 +127,7 @@ export const VueRouterHelper = class VueRouterHelper {
         if (Strings.isNotBlank(_.permission)) {
           routerObj.meta._permissions.push(_.permission);
         }
-
+        
         /*
         处理path
          */
@@ -140,16 +138,16 @@ export const VueRouterHelper = class VueRouterHelper {
           routerObj.path = _.path.replace(/([A-Z])/g, (v) => '_' + v.toLowerCase());
         } else if (Strings.isNotBlank(r.name)) {
           _.path = r.name
-            .replace(new RegExp('^' + (componentLoadPath.replace(/\//g, '')), 'i'), '')
-            .replace(/^([A-Z])/, (v) => v.toLowerCase());
+          .replace(new RegExp('^' + (componentLoadPath.replace(/\//g, '')), 'i'), '')
+          .replace(/^([A-Z])/, (v) => v.toLowerCase());
           routerObj.path = _.path.replace(/([A-Z])/g, (v) => '_' + v.toLowerCase());
         }
-
+        
         routerObj.path = (routerObj.path || '/').replace(/\/+/g, '/');
         if (isTop && !routerObj.path.startsWith('/')) {
           routerObj.path = '/' + routerObj.path;
         }
-
+        
         /*
         处理layout
          */
@@ -171,15 +169,15 @@ export const VueRouterHelper = class VueRouterHelper {
           const componentPath = `${this.config.options.pathLoadDir}${componentLoadPath}/${_.path}.vue`;
           routerObj.component = loadUtils.require(componentPath);
         }
-
-
+        
+        
         for (const k in _) {
           if (!_.hasOwnProperty(k)) continue;
           if (k.startsWith('_')) routerObj.meta[k] = _[k];
         }
-
+        
         const childrenPath = (routerObj.path === '/' ? ('/' + (r.name || '')) : `${componentLoadPath}/${routerObj.path}`).replace(/\/+/g, '/');
-
+        
         /*
         登陆校验
          */
@@ -221,8 +219,8 @@ export const VueRouterHelper = class VueRouterHelper {
           })[0];
           item.path = `${routerObj.path}/login`.replace(/\/+/g, '/');
           rootRouterList.push(item);
-
-
+          
+          
           let permissionDenied;
           let isRootRouter = false;
           if (typeof _.permissionDenied === "string") {
@@ -258,7 +256,7 @@ export const VueRouterHelper = class VueRouterHelper {
               }
             }
           }
-
+          
           // component
           const pdItem = helper({
             rootRouterList,
@@ -280,8 +278,8 @@ export const VueRouterHelper = class VueRouterHelper {
             if (!routerObj.children) routerObj.children = [];
             routerObj.children.push(pdItem);
           }
-
-
+          
+          
           beforeEnter = async (to, from, next) => {
             const res = await _.loginVerify({to, from, setPermission, isLoginRouter: false});
             if (res === false) {
@@ -294,15 +292,15 @@ export const VueRouterHelper = class VueRouterHelper {
                 next();
                 return;
               }
-
-
+              
+              
               if (!Lists.includesAll(currentPermissions, to.meta._permissions)) {
                 next({
                   name: pdName
                 });
                 return;
               }
-
+              
               next();
             }
           };
@@ -310,7 +308,7 @@ export const VueRouterHelper = class VueRouterHelper {
         } else if (beforeEnter) {
           routerObj.beforeEnter = beforeEnter;
         }
-
+        
         /*
         孩子级
          */
@@ -336,7 +334,7 @@ export const VueRouterHelper = class VueRouterHelper {
         if (r.hiddenChildren) {
           const hiddenChildren = r.hiddenChildren;
           delete r.hiddenChildren;
-
+          
           const subList = helper({
             rootRouterList,
             routers: hiddenChildren,
@@ -355,26 +353,26 @@ export const VueRouterHelper = class VueRouterHelper {
             // routerObj.children = subList;
           }
         }
-
+        
         loadUtils.weeding(r);
         Objs.merge(routerObj, r);
-
+        
         routerList.push(routerObj);
       });
       return routerList;
     };
-
+    
     this.routers = helper({
       routers: this.config.routers
     });
   }
-
+  
   build() {
     this.buildLayouts();
     this.buildRouters();
     return this.routers;
   }
-
+  
   bindEvents(router) {
     this.router = router;
     router.afterEach((to) => {
